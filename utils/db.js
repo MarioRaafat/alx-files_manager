@@ -1,7 +1,5 @@
 import mongodb from 'mongodb';
-// eslint-disable-next-line no-unused-vars
-import Collection from 'mongodb/lib/collection';
-import envLoader from './env_loader';
+import envLoader from './env_loader.js';
 
 /**
  * Represents a MongoDB client.
@@ -26,7 +24,7 @@ class DBClient {
    * @returns {boolean}
    */
   isAlive() {
-    return this.client.isConnected();
+    return this.client.topology && this.client.topology.isConnected();
   }
 
   /**
