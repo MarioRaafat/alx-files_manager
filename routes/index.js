@@ -1,9 +1,15 @@
-import Router from 'express';
-import { getStats, getStatus } from '../controllers/AppController.js';
+import {getStats, getStatus} from '../controllers/AppController.js';
+import { APIError, errorResponse } from '../middlewares/error.js';
 
-const router = Router();
+const injectRoutes = (server) => {
+  server.get('/status', getStatus);
+  server.get('/stats', getStats);
 
-router.get('/status', getStatus);
-router.get('/stats', getStats);
 
-export default router;
+  server.all('*', (req, res, next) => {
+    errorResponse(new APIError(404, `Cannot ${req.method} ${req.url}`), req, res, next);
+  });
+  server.use(errorResponse);
+};
+
+export default injectRoutes;
