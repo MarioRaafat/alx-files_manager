@@ -66,9 +66,60 @@ export const postUpload = async (req, res) => {
     });
 };
 
-export const getShow = async (req, res) => {};
+export const getShow = async (req, res) => {
+    const { user } = req;
+    const fileId = await dbClient.toObjectId(req.params.id);
+    const userId = user._id;
 
-export const getIndex = async (req, res) => {};
+    const file = await dbClient.client.db().collection('files').findOne({ _id: fileId, userId });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    return res.status(200).json({
+        id: file._id.toString(),
+        userId: userId.toString(),
+        name: file.name,
+        type: file.type,
+        isPublic: file.isPublic,
+        parentId: (file.parentId === ROOT_FOLDER_ID) ? 0 : file.parentId,
+    });
+};
+
+export const getIndex = async (req, res) => {
+    const { user } = req;
+    const parentId = req.query.parentId || ROOT_FOLDER_ID.toString();
+    const page = /\d+/.test((req.query.page || '').toString())
+        ? Number.parseInt(req.query.page, 10)
+        : 0;
+    const filesFilter = {
+        userId: user._id,
+        parentId: parentId === ROOT_FOLDER_ID.toString()
+            ? parentId
+            : new mongoDBCore.BSON.ObjectId(isValidId(parentId) ? parentId : NULL_ID),
+    };
+
+    const files = await (await (await dbClient.filesCollection())
+        .aggregate([
+            { $match: filesFilter },
+            { $sort: { _id: -1 } },
+            { $skip: page * MAX_FILES_PER_PAGE },
+            { $limit: MAX_FILES_PER_PAGE },
+            {
+                $project: {
+                    _id: 0,
+                    id: '$_id',
+                    userId: '$userId',
+                    name: '$name',
+                    type: '$type',
+                    isPublic: '$isPublic',
+                    parentId: {
+                    $cond: { if: { $eq: ['$parentId', '0'] }, then: 0, else: '$parentId' },
+                    },
+                },
+            },
+        ])).toArray();
+
+    res.status(200).json(files);
+};
 
 export const putPublish = async (req, res) => {};
 
