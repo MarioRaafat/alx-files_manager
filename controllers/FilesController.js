@@ -121,8 +121,44 @@ export const getIndex = async (req, res) => {
     res.status(200).json(files);
 };
 
-export const putPublish = async (req, res) => {};
+export const putPublish = async (req, res) => {
+    const { user } = req;
+    const fileId = await dbClient.toObjectId(req.params.id);
+    const userId = user._id;
 
-export const putUnpublish = async (req, res) => {};
+    const file = await dbClient.client.db().collection('files').findOne({ _id: fileId, userId });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    await dbClient.client.db().collection('files').updateOne({ _id: fileId }, { $set: { isPublic: true } });
+
+    return res.status(200).json({
+        id: file._id.toString(),
+        userId: userId.toString(),
+        name: file.name,
+        type: file.type,
+        isPublic: true,
+        parentId: (file.parentId === ROOT_FOLDER_ID) ? 0 : file.parentId,
+    });
+};
+
+export const putUnpublish = async (req, res) => {
+    const { user } = req;
+    const fileId = await dbClient.toObjectId(req.params.id);
+    const userId = user._id;
+
+    const file = await dbClient.client.db().collection('files').findOne({ _id: fileId, userId });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    await dbClient.client.db().collection('files').updateOne({ _id: fileId }, { $set: { isPublic: false } });
+
+    return res.status(200).json({
+        id: file._id.toString(),
+        userId: userId.toString(),
+        name: file.name,
+        type: file.type,
+        isPublic: false,
+        parentId: (file.parentId === ROOT_FOLDER_ID) ? 0 : file.parentId,
+    });
+};
 
 export const getFile = async (req, res) => {};
