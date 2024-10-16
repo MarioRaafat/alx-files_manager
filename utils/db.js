@@ -1,11 +1,9 @@
 const dotenv = require('dotenv');
 const mongodb = require('mongodb');
 
-
-
+dotenv.config();
 class DBClient {
     constructor() {
-        dotenv.config();
         this.host = process.env.DB_HOST || 'localhost';
         this.port = process.env.DB_PORT || 27017;
         this.database = process.env.DB_DATABASE || 'files_manager';
