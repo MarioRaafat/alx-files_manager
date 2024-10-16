@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import dbClient from '../utils/db.js';
 import envLoader from '../utils/env_loader.js';
+import mime from 'mime-types';
 
 envLoader();
 
