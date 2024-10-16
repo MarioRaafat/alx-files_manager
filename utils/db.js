@@ -58,6 +58,15 @@ class DBClient {
   async filesCollection() {
     return this.client.db().collection('files');
   }
+
+  /**
+   * Converts a string to an ObjectId.
+   * @param {string} id - The string representation of the ObjectId.
+   * @returns {ObjectId}
+   */
+  async toObjectId(id) {
+    return new mongodb.ObjectId(id);
+  }
 }
 
 export const dbClient = new DBClient();
