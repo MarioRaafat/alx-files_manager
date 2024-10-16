@@ -169,4 +169,32 @@ export const putUnpublish = async (req, res) => {
     });
 };
 
-export const getFile = async (req, res) => {};
+export const getFile = async (req, res) => {
+    const fileId = await dbClient.toObjectId(req.params.id);
+    const user = req.user;
+
+    const file = await dbClient.client.db().collection('files').findOne({ _id: fileId });
+    if (!file) return res.status(404).json({ error: 'Not found' });
+
+    const isOwner = user && file.userId.toString() === user._id.toString();
+    if (!file.isPublic && !isOwner) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+
+    if (file.type === 'folder') {
+        return res.status(400).json({ error: "A folder doesn't have content" });
+    }
+
+    if (!file.localPath || !fs.existsSync(file.localPath)) {
+        return res.status(404).json({ error: 'Not found' });
+    }
+
+    // from ChatGPT 
+    // Determine the MIME type using the mime-types module
+    const mimeType = mime.lookup(file.name) || 'application/octet-stream';
+
+    // Return the file content with the correct MIME type
+    res.setHeader('Content-Type', mimeType);
+    const fileStream = fs.createReadStream(file.localPath);
+    fileStream.pipe(res);
+};
