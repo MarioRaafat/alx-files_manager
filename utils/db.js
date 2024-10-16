@@ -9,8 +9,9 @@ class DBClient {
         this.host = process.env.DB_HOST || 'localhost';
         this.port = process.env.DB_PORT || 27017;
         this.database = process.env.DB_DATABASE || 'files_manager';
-        this.url = `mongodb://${this.host}:${this.port}`;
-        this.client = new mongodb.MongoClient(this.url, { useUnifiedTopology: true });
+        const dbURL = `mongodb://${host}:${port}/${database}`;
+
+        this.client = new mongodb.MongoClient(this.dbURL, { useUnifiedTopology: true });
         this.client.connect();
     }
 
