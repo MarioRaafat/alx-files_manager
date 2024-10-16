@@ -7,6 +7,7 @@ import envLoader from '../utils/env_loader.js';
 envLoader();
 
 const ROOT_FOLDER_ID = 0;
+const MAX_FILES_PER_PAGE = 20;
 const FOLDER_PATH = process.env.FOLDER_PATH || '/tmp/files_manager';
 
 
@@ -86,39 +87,46 @@ export const getShow = async (req, res) => {
 
 export const getIndex = async (req, res) => {
     const { user } = req;
-    const parentId = req.query.parentId || ROOT_FOLDER_ID.toString();
-    const page = /\d+/.test((req.query.page || '').toString())
+    const parentId = req.query.parentId || ROOT_FOLDER_ID;
+    const page = /\d+/.test(req.query.page || '')
         ? Number.parseInt(req.query.page, 10)
         : 0;
+
     const filesFilter = {
         userId: user._id,
-        parentId: parentId === ROOT_FOLDER_ID.toString()
-            ? parentId
-            : new mongoDBCore.BSON.ObjectId(isValidId(parentId) ? parentId : NULL_ID),
+        parentId: parentId === ROOT_FOLDER_ID ? ROOT_FOLDER_ID : await dbClient.toObjectId(parentId),
     };
 
-    const files = await (await (await dbClient.filesCollection())
-        .aggregate([
-            { $match: filesFilter },
-            { $sort: { _id: -1 } },
-            { $skip: page * MAX_FILES_PER_PAGE },
-            { $limit: MAX_FILES_PER_PAGE },
-            {
-                $project: {
-                    _id: 0,
-                    id: '$_id',
-                    userId: '$userId',
-                    name: '$name',
-                    type: '$type',
-                    isPublic: '$isPublic',
-                    parentId: {
-                    $cond: { if: { $eq: ['$parentId', '0'] }, then: 0, else: '$parentId' },
+    try {
+        const files = await dbClient.client
+            .db()
+            .collection('files')
+            .aggregate([
+                { $match: filesFilter },
+                { $sort: { _id: -1 } }, // Sort by newest first
+                { $skip: page * MAX_FILES_PER_PAGE },
+                { $limit: MAX_FILES_PER_PAGE },
+                {
+                    $project: {
+                        _id: 0,
+                        id: '$_id',
+                        userId: '$userId',
+                        name: '$name',
+                        type: '$type',
+                        isPublic: '$isPublic',
+                        parentId: {
+                            $cond: { if: { $eq: ['$parentId', ROOT_FOLDER_ID] }, then: 0, else: '$parentId' },
+                        },
                     },
                 },
-            },
-        ])).toArray();
+            ])
+            .toArray();
 
-    res.status(200).json(files);
+        return res.status(200).json(files);
+    } catch (error) {
+        console.error('Error fetching files:', error);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
 };
 
 export const putPublish = async (req, res) => {
